@@ -1,111 +1,88 @@
-import md_mysqlutil
-import md_logfile
+import md_sqlutil.postgres as postgres
 import configparser
 import os
 import pandas as pd
 from datetime import datetime
 import re
-import numpy as np
+import json
+from pyarrow import feather
 
-def data_read(path_relative,filename,extension,debug=None):
-	filename = filename+"."+extension
+def data_read(path_relative,filename,feather_file,debug=None):
+
 	na_values = ['', ' ', 'NA', 'N/A', 'na', 'n/a', 'null', 'NULL', 'none', 'None', 'NaN', 'nan', 'NAN', 'NaT', 'nat']
-
 	path_absolute = os.path.join(path_relative.replace("custom",os.getlogin()), filename)
-	dataframe = pd.read_csv(path_absolute,dtype=str,sep=";",na_values=na_values,keep_default_na=True,index_col=None,parse_dates=None)
-	#dataframe = dataframe.astype(str)
-	#dataframe = dataframe.replace({NaN: None})
-	md_mysqlutil.debug_code(debug,"dataframe information",dataframe.info())
+	print(path_absolute)
+	if '1' in feather_file: dataframe = pd.read_feather(path_absolute)
+	else: dataframe = pd.read_csv(path_absolute,dtype=str,sep=";",na_values=na_values,keep_default_na=True,index_col=None,parse_dates=None)
+	
+	postgres.debug_code(debug,"dataframe information",dataframe.info())
+	
 	return(dataframe)
+
 
 def try_cast_date(x):
 	after_trim_pattern = r"\b\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\b"
-	br_pattern = r"\b\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}\b"
+	brazilian_pattern = r"\b\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}\b"
 
-	# not bool(re.search(br_pattern, x)) == bool(re.search(br_pattern, x)) == False
-	if isinstance(x, str) and not bool(re.search(br_pattern, x)) and not bool(re.search(after_trim_pattern, x)):
-			#print(type(x),x)
-			x = re.sub(r'[^A-Za-z0-9/]+', '', x)
-			try: x = datetime.strptime(x, "%d/%m/%Y")
-			except: x = None
-	#else: print(type(x),x,"---------------------------------------------------")
+	if isinstance(x, str) and not bool(re.search(brazilian_pattern, x)) and not bool(re.search(after_trim_pattern, x)):
+		x = re.sub(r'[^A-Za-z0-9/]+', '', x)
+		try: x = datetime.strptime(x, "%d/%m/%Y")
+		except: x = None
 
 	return x
+
 
 def main():
 	config = configparser.RawConfigParser()
 	config.read(os.path.join(os.getcwd(),r"config/config.ini"))
-	debug = int(config["STATUS"]["debug"])
-	auth_plugin = config["DATABASE"]["auth_plugin"]
+	debug = config["STATUS"]["debug"]
 	database =config["DATABASE"]["database"]
-	column_name_modify = config["DATASET"]["column_name_modify"]
+	control_data_field = config["DATASET"]["control_data_field"]
 	column_to_date = config["DATASET"]["column_to_date"]
 	usp_name = config["PROCEDURE"]["name"]
+
+	with open(os.path.join(os.getcwd(),r"config/config.json")) as jsf: config_json = json.load(jsf)
 
 	df = data_read(
 		path_relative=config["BASEFILE"]["path_in"]
 		,filename=config["BASEFILE"]["list_name_file"]
-		,extension=config["BASEFILE"]["extension"]
+		,feather_file=config["BASEFILE"]["feather_file"]
 		,debug=debug
 	)
 	
-	if column_name_modify:
+	if control_data_field:
 		if '1' in config["DATASET"]["column_trim"]:
-			md_mysqlutil.debug_code(debug,"Trim and ajust to data")
-			df[column_name_modify] = df[column_name_modify].apply(lambda x: try_cast_date(x))
-
-		# df.to_csv(os.path.join(os.getcwd(),"hist_issuance.csv"),sep=";",index=False)
+			postgres.debug_code(debug,"Trim and ajust to data")
+			df[control_data_field] = df[control_data_field].apply(lambda x: try_cast_date(x))
 
 		if '1' in column_to_date:
-			md_mysqlutil.debug_code(debug,"Cast to date")
-			df[column_name_modify] = pd.to_datetime(df[column_name_modify], errors='coerce')
-			# Must be convert explicity (cast) to string.
-			df[column_name_modify] = df[column_name_modify].dt.strftime("%Y-%m-%d")
-			#df[column_name_modify] = pd.to_datetime(df[column_name_modify])
-			"""
-			#Lines below doesn't work, because object is a generic type, not specifically string.
-			df[column_name_modify] = df[column_name_modify].astype("object")	
-			df[column_name_modify] = df[column_name_modify].where(df[column_name_modify].notna(), None)
-			"""
-	df = df.where(df.notnull(), None)
-	print(df.info())
-	
-	#df.to_csv(os.path.join(os.getcwd(),"hist_issuanceII.csv"),sep=";",index=False)
+			postgres.debug_code(debug,"Cast to date")
+			df[control_data_field] = pd.to_datetime(df[control_data_field], errors='coerce')
+			df[control_data_field] = df[control_data_field].dt.strftime("%Y-%m-%d")
 
-	conn = md_mysqlutil.connection(
-		auth_plugin=auth_plugin
-		,database=database
-		,user=config["DATABASE"]["user"]
-		,password=config["DATABASE"]["password"]
-		,host=config["DATABASE"]["host"]
-		,debug=debug
-	)
+	df = df.where(df.notnull(), None)
 	
-	md_mysqlutil.debug_code(debug,"connection variable",conn)
+	postgres.debug_code(debug,df.info())
+
+	conn = postgres.connection(db_config=config_json,debug=debug)
+	
+	postgres.debug_code(debug,"connection variable",conn)
 	
 	if '1' in config["TABLE"]["get_data"]:
-		result_set =	md_mysqlutil.get_data(
-				connection=conn
-				,sql_query=config["QUERY"]["name_file"]
-				,debug=debug
-			)
-
-		print(result_set)
+		abs_path_destination = os.path.join(config["BASEFILE"]["destination"].replace("custom",os.getlogin()),config["BASEFILE"]["destination_name"]+"csv")
+		result_set = postgres.get_data(connection=conn, sql_query=f"query/{config["QUERY"]["name_file"]}",abs_path_destination=abs_path_destination,debug=debug)
+		postgres.debug_code(debug,"Downloaded data")
 
 	if '1' in config["TABLE"]["insert_data"]:
-		md_mysqlutil.insert_into(
+		postgres.insert_into(
 			connection=conn
-			,database=database
 			,table=config["TABLE"]["name"]
 			,dataframe=df
-			,column_size=len(df.columns.to_list())
 		)
-
-		#md_mysqlutil.debug_code(debug,"Data was insert")
-
-			
+		postgres.debug_code(debug,"Inserted data")
+	
 	if not (usp_name == " " or usp_name == ""):
-		md_mysqlutil.exec_procedure(
+		postgres.exec_procedure(
 			connection=conn
 			,database=database
 			,name_procedure=config["PROCEDURE"]["name"]
@@ -113,8 +90,10 @@ def main():
 			,date_final=config["PROCEDURE"]["end_date"]
 			,debug=debug
 		)
-		md_mysqlutil.debug_code(debug,"Data was executed")
+		postgres.debug_code(debug,"Executed USP")
 
 	conn.close()
+
+
 if __name__ == "__main__":
 	main()

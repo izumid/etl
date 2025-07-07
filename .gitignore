@@ -9,7 +9,14 @@
 __file/*
 !__file/.gitkeep
 
+img/*
+!img/.gitkeep
+
+query/*
+!query/.gitkeep
+
 #ignore specific files
+config/config.ini
 config/config.json
 analyses.py
 
