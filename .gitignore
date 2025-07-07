@@ -1,0 +1,20 @@
+# Ignore folders and its contents
+/.venv/
+/-v/
+
+# Ignore folders and its contents, any location
+**/__pycache__/
+
+# Ignore files from folder, kept it.
+__file/*
+!__file/.gitkeep
+
+#ignore specific files
+config/config.json
+analyses.py
+
+# Ignore files with extension
+*.txt
+
+# Dont Ignore files below
+!requirements.txt
