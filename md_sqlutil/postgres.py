@@ -12,7 +12,7 @@ import pandas as pd
 def debug_code(debug,message,var=None):
 	if '1' in debug: 
 		if var is None: print(f"{message};\r\n")
-		else: print(f"{message}: {var};\r\n")
+		else: print(f"{message}: \r\n{var};\r\n")
 
 def connection(db_config,debug=None):
 	debug_code(debug,"Credentials",f"database={db_config["database"]},user={db_config["user"]},password={db_config["password"]},host={db_config["host"]}")
@@ -25,13 +25,18 @@ def connection(db_config,debug=None):
 		lf.log_file("log_error",f"Step: 'DB Connection'", datetime.today())
 
 
-def get_data(connection,sql_query,abs_path_destination,debug):
+def get_data(connection,sql_query,abs_path_destination,data_feather,debug):
 		
 	with open(ospath.join(getcwd(),sql_query+".sql"), 'r', encoding='utf-8') as file: sql_query = file.read()
 
 	try: 
 		df = pd.read_sql(sql_query, connection)
-		df.to_csv(abs_path_destination,sep=';',encoding="utf-8")
+		if '1' in data_feather: 
+			abs_path_destination = abs_path_destination + ".feather"
+			df.to_feather(abs_path_destination)
+		else: 
+			abs_path_destination = abs_path_destination + ".csv"
+			df.to_csv(abs_path_destination,sep=';',encoding="utf-8")
 	except Exception as error:
 		debug_code(debug,(error,"Failed, can't extract data :( "))
 		lf.log_file("log_error",f"Step: 'Data Extract'", datetime.today())
@@ -42,7 +47,6 @@ def insert_into(connection,table,dataframe,match_db_columns=False):
 		try:
 			sql_query = f"TRUNCATE TABLE {table}"
 			connection.execute(text(sql_query))
-			print(f"Truncate table {table}")
 
 			if not match_db_columns:
 				columns_list = dataframe.columns.tolist()
@@ -53,7 +57,6 @@ def insert_into(connection,table,dataframe,match_db_columns=False):
 			else: dataframe.to_sql(name=table, con=connection, if_exists="append", index=False, method="multi")	
 			
 			connection.commit()
-			print("Inserted Data")
 		except (Exception, psycopg2.DatabaseError) as error:
 			print(f"[Error] Insert data: {error}")
 

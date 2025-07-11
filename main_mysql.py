@@ -5,15 +5,18 @@ import pandas as pd
 from datetime import datetime
 import re
 import json
+from pyarrow import feather
 
 
-def data_read(path_relative,filename,feather_file,debug):
+def data_read(path_relative,filename,feather_file,debug=None):
 
 	na_values = ['', ' ', 'NA', 'N/A', 'na', 'n/a', 'null', 'NULL', 'none', 'None', 'NaN', 'nan', 'NAN', 'NaT', 'nat']
 	path_absolute = os.path.join(path_relative.replace("custom",os.getlogin()), filename)
+	print(path_absolute)
 	if '1' in feather_file: dataframe = pd.read_feather(path_absolute)
 	else: dataframe = pd.read_csv(path_absolute,dtype=str,sep=";",na_values=na_values,keep_default_na=True,index_col=None,parse_dates=None)
-	postgres.debug_code(debug,"dataframe header",dataframe.head())
+	
+	postgres.debug_code(debug,"dataframe information",dataframe.info())
 	
 	return(dataframe)
 
@@ -60,19 +63,16 @@ def main():
 
 	df = df.where(df.notnull(), None)
 	
-	postgres.debug_code(debug,"dataframe header",df.head())
+	postgres.debug_code(debug,df.info())
 
 	conn = postgres.connection(db_config=config_json,debug=debug)
 	
 	postgres.debug_code(debug,"connection variable",conn)
 	
-	if len(config["BASEFILE"]["destination"]) > 3:
-		path_destination = config["BASEFILE"]["destination"].replace("custom",os.getlogin())
-		if not os.path.exists(): os.makedirs(path_destination)
-
-		abs_path_destination = os.path.join(path_destination,config["BASEFILE"]["destination_filename"])
-		postgres.get_data(connection=conn, sql_query=f"query/{config["QUERY"]["name_file"]}",abs_path_destination=abs_path_destination,data_feather=config["TABLE"]["data_feather"],debug=debug)
-		postgres.debug_code(debug,"Downloaded data",abs_path_destination)
+	if '1' in config["TABLE"]["get_data"]:
+		abs_path_destination = os.path.join(config["BASEFILE"]["destination"].replace("custom",os.getlogin()),config["BASEFILE"]["destination_name"]+"csv")
+		result_set = postgres.get_data(connection=conn, sql_query=f"query/{config["QUERY"]["name_file"]}",abs_path_destination=abs_path_destination,debug=debug)
+		postgres.debug_code(debug,"Downloaded data")
 
 	if '1' in config["TABLE"]["insert_data"]:
 		postgres.insert_into(
