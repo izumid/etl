@@ -1,20 +1,30 @@
 # Ignore folders and its contents
 /.venv/
 /-v/
+/build/
+/dist/
 
 # Ignore folders and its contents, any location
 **/__pycache__/
 
 # Ignore files from folder, kept it.
+exe_file/*
 __file/*
-!__file/.gitkeep
+
+img/*
+!img/.gitkeep
+
+query/*
+!query/.gitkeep
 
 #ignore specific files
+config/config.ini
 config/config.json
 analyses.py
 
 # Ignore files with extension
 *.txt
+*.exe
 
 # Dont Ignore files below
 !requirements.txt
