@@ -1,6 +1,6 @@
 import os
 import traceback
-
+import datetime
 
 def write_info(file, header, message):
 	file.write(header)
@@ -10,9 +10,9 @@ def write_info(file, header, message):
 	file.write("\n\n")
 
 
-def log_file(filename,header_message,time,message=None):
+def log_file(filename,header_message,message=None):
 	filename = filename + ".txt"
-	header=f"===== {header_message}: {time};  =====\n\n"
+	header=f"===== {header_message}: {datetime.datetime.today()};  =====\n\n"
     
 	if not os.path.exists(os.path.join(os.getcwd(),filename)): open(filename, "x")
 	

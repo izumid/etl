@@ -5,6 +5,7 @@ import pandas as pd
 from datetime import datetime
 import re
 import json
+import md_logfile as lf
 
 
 def data_read(path_relative,filename,feather_file,debug):
@@ -39,6 +40,7 @@ def main():
 	column_to_date = config["DATASET"]["column_to_date"]
 	usp_name = config["PROCEDURE"]["name"]
 
+
 	with open(os.path.join(os.getcwd(),r"config/config.json")) as jsf: config_json = json.load(jsf)
 
 	df = data_read(
@@ -68,7 +70,7 @@ def main():
 	
 	if len(config["BASEFILE"]["destination"]) > 3:
 		path_destination = config["BASEFILE"]["destination"].replace("custom",os.getlogin())
-		if not os.path.exists(): os.makedirs(path_destination)
+		if not os.path.exists(path_destination): os.makedirs(path_destination)
 
 		abs_path_destination = os.path.join(path_destination,config["BASEFILE"]["destination_filename"])
 		postgres.get_data(connection=conn, sql_query=f"query/{config["QUERY"]["name_file"]}",abs_path_destination=abs_path_destination,data_feather=config["TABLE"]["data_feather"],debug=debug)
