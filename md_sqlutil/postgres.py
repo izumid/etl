@@ -1,6 +1,4 @@
-import mysql.connector
-import md_logfile as lf
-from datetime import datetime
+
 from time import sleep
 from os import path as ospath
 from os import getcwd
@@ -8,11 +6,20 @@ from sqlalchemy import create_engine, text
 import urllib.parse
 import psycopg2
 import pandas as pd
+import os
+import sys
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+sys.path.append(parent_dir)
+import md_logfile as lf
+
 
 def debug_code(debug,message,var=None):
 	if '1' in debug: 
 		if var is None: print(f"{message};\r\n")
 		else: print(f"{message}: \r\n{var};\r\n")
+
 
 def connection(db_config,debug=None):
 	debug_code(debug,"Credentials",f"database={db_config["database"]},user={db_config["user"]},password={db_config["password"]},host={db_config["host"]}")
@@ -20,9 +27,10 @@ def connection(db_config,debug=None):
 	try: 
 		connection = engine.connect()
 		return connection
-	except mysql.connector.Error as error:
+	except (Exception, psycopg2.DatabaseError) as error:
 		debug_code(debug,(error,"Failed, can't connect to database :["))
-		lf.log_file("log_error",f"Step: 'DB Connection'", datetime.today())
+		#lf.log_file("log_error",f"Step: 'DB Connection'", datetime.today())
+		lf.log_file(filename="log_file",header_message="Database Connection",message=error)
 
 
 def get_data(connection,sql_query,abs_path_destination,data_feather,debug):
@@ -39,8 +47,8 @@ def get_data(connection,sql_query,abs_path_destination,data_feather,debug):
 			df.to_csv(abs_path_destination,sep=';',encoding="utf-8")
 	except Exception as error:
 		debug_code(debug,(error,"Failed, can't extract data :( "))
-		lf.log_file("log_error",f"Step: 'Data Extract'", datetime.today())
-
+		#lf.log_file("log_error",f"Step: 'Data Extract'", datetime.today())
+		lf.log_file(filename="log_file",header_message="Select Data",message=error)
 
 
 def insert_into(connection,table,dataframe,match_db_columns=False):
@@ -57,10 +65,11 @@ def insert_into(connection,table,dataframe,match_db_columns=False):
 			else: dataframe.to_sql(name=table, con=connection, if_exists="append", index=False, method="multi")	
 			
 			connection.commit()
+			sleep(5)
 		except (Exception, psycopg2.DatabaseError) as error:
-			print(f"[Error] Insert data: {error}")
+			#print(f"[Error] Insert data: {error}")
+			lf.log_file(filename="log_file",header_message="Insert Data",message=error)
 
-		sleep(5)
 
 
 def exec_procedure(connection,name_procedure,date_initial,date_final,debug=None):
@@ -75,8 +84,10 @@ def exec_procedure(connection,name_procedure,date_initial,date_final,debug=None)
 		print(sql_query)
 		connection.execute(text(sql_query))
 		connection.commit()
-	except Exception as error:
-		print(f"[Error]: {error}")
-
 		sleep(15)
+	except (Exception, psycopg2.DatabaseError) as error:
+		lf.log_file(filename="log_file",header_message="Procedure's Execution",message=error)
+
+
+
 	#cursor.close()
