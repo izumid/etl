@@ -5,7 +5,6 @@ import pandas as pd
 from datetime import datetime
 import re
 import json
-import md_logfile as lf
 
 
 def data_read(path_relative,filename,feather_file,debug):
