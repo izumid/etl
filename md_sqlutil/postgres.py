@@ -9,6 +9,7 @@ import pandas as pd
 import os
 import sys
 
+
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
@@ -29,7 +30,6 @@ def connection(db_config,debug=None):
 		return connection
 	except (Exception, psycopg2.DatabaseError) as error:
 		debug_code(debug,(error,"Failed, can't connect to database :["))
-		#lf.log_file("log_error",f"Step: 'DB Connection'", datetime.today())
 		lf.log_file(filename="log_file",header_message="Database Connection",message=error)
 
 
@@ -47,7 +47,6 @@ def get_data(connection,sql_query,abs_path_destination,data_feather,debug):
 			df.to_csv(abs_path_destination,sep=';',encoding="utf-8")
 	except Exception as error:
 		debug_code(debug,(error,"Failed, can't extract data :( "))
-		#lf.log_file("log_error",f"Step: 'Data Extract'", datetime.today())
 		lf.log_file(filename="log_file",header_message="Select Data",message=error)
 
 
@@ -61,15 +60,14 @@ def insert_into(connection,table,dataframe,match_db_columns=False):
 				sql_query = text(f"INSERT INTO {table} VALUES ({', '.join([':' + col for col in columns_list])})")
 				data_list = dataframe.to_dict(orient="records")  
 				connection.execute(sql_query, data_list)
+				#print("sql_query", sql_query)
 				
 			else: dataframe.to_sql(name=table, con=connection, if_exists="append", index=False, method="multi")	
 			
 			connection.commit()
 			sleep(5)
 		except (Exception, psycopg2.DatabaseError) as error:
-			#print(f"[Error] Insert data: {error}")
 			lf.log_file(filename="log_file",header_message="Insert Data",message=error)
-
 
 
 def exec_procedure(connection,name_procedure,date_initial,date_final,debug=None):
@@ -81,13 +79,8 @@ def exec_procedure(connection,name_procedure,date_initial,date_final,debug=None)
 
 	try:
 		sql_query = f"CALL {name_procedure}({date_initial}, {date_final});"
-		print(sql_query)
 		connection.execute(text(sql_query))
 		connection.commit()
 		sleep(15)
 	except (Exception, psycopg2.DatabaseError) as error:
 		lf.log_file(filename="log_file",header_message="Procedure's Execution",message=error)
-
-
-
-	#cursor.close()

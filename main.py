@@ -81,6 +81,7 @@ def main():
 			connection=conn
 			,table=config["TABLE"]["name"]
 			,dataframe=df
+			,match_db_columns=False
 		)
 		postgres.debug_code(debug,"Inserted data")
 	
