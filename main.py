@@ -87,7 +87,6 @@ def main():
 	if not (usp_name == " " or usp_name == ""):
 		postgres.exec_procedure(
 			connection=conn
-			,database=database
 			,name_procedure=config["PROCEDURE"]["name"]
 			,date_initial= config["PROCEDURE"]["start_date"]
 			,date_final=config["PROCEDURE"]["end_date"]
