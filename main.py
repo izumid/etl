@@ -5,7 +5,6 @@ import pandas as pd
 from datetime import datetime
 import re
 import json
-import md_logfile as lf
 
 
 def data_read(path_relative,filename,feather_file,debug):
@@ -81,13 +80,13 @@ def main():
 			connection=conn
 			,table=config["TABLE"]["name"]
 			,dataframe=df
+			,match_db_columns=False
 		)
 		postgres.debug_code(debug,"Inserted data")
 	
 	if not (usp_name == " " or usp_name == ""):
 		postgres.exec_procedure(
 			connection=conn
-			,database=database
 			,name_procedure=config["PROCEDURE"]["name"]
 			,date_initial= config["PROCEDURE"]["start_date"]
 			,date_final=config["PROCEDURE"]["end_date"]
