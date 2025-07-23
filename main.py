@@ -39,7 +39,6 @@ def main():
 	column_to_date = config["DATASET"]["column_to_date"]
 	usp_name = config["PROCEDURE"]["name"]
 
-
 	with open(os.path.join(os.getcwd(),r"config/config.json")) as jsf: config_json = json.load(jsf)
 
 	df = data_read(

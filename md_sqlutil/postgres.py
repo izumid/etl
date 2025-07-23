@@ -59,9 +59,7 @@ def insert_into(connection,table,dataframe,match_db_columns=False):
 				columns_list = dataframe.columns.tolist()
 				sql_query = text(f"INSERT INTO {table} VALUES ({', '.join([':' + col for col in columns_list])})")
 				data_list = dataframe.to_dict(orient="records")  
-				connection.execute(sql_query, data_list)
-				#print("sql_query", sql_query)
-				
+				connection.execute(sql_query, data_list)				
 			else: dataframe.to_sql(name=table, con=connection, if_exists="append", index=False, method="multi")	
 			
 			connection.commit()
