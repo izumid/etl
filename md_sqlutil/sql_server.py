@@ -18,10 +18,8 @@ def debug_code(debug,message,var=None):
 		else: print(f"{message}: \r\n{var};\r\n")
 
 def data_read(path_absolute,debug):
-
 	na_values = ['', ' ', 'NA', 'N/A', 'na', 'n/a', 'null', 'NULL', 'none', 'None', 'NaN', 'nan', 'NAN', 'NaT', 'nat']
-	#path_absolute = os.path.join(path_relative.replace("custom",os.getlogin()), filename)
-
+	
 	if Path(os.path.basename(path_absolute)).suffix == ".feather": dataframe = pd.read_feather(path_absolute)
 	else: dataframe = pd.read_csv(path_absolute,dtype=str,sep=";",na_values=na_values,keep_default_na=True,index_col=None,parse_dates=None)
 	debug_code(debug,"dataframe header",dataframe.head())
@@ -85,7 +83,7 @@ def insert_into(connection,table,path_origin,insert_by_row,truncate,debug,contro
 	cursor = connection.cursor()
 	for basefile in os.listdir(path_origin):
 		path_absolute = os.path.join(path_origin,basefile)
-		print("Aaaaaaaaaaaa", path_absolute)
+		
 		if os.path.isfile(path_absolute):
 			df=data_read(path_absolute=path_absolute,debug=debug)
 			debug_code(debug,"dataframe header",df.head())
